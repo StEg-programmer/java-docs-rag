@@ -1,0 +1,22 @@
+# Declarative example; loading/validation is a future implementation task.
+data_dir: data
+sources_file: configs/sources.yaml
+chunking:
+  strategy: paragraph
+  chunk_size: 1000
+  overlap: 150
+embedding:
+  model_id: null
+  dimension: null
+vectorstore:
+  url: http://localhost:6333
+  collection: java_docs
+retrieval:
+  top_k: 10
+  rerank_top_n: 5
+  min_similarity: null
+generation:
+  base_url: http://localhost:11434
+  model_id: null
+observability:
+  enabled: false

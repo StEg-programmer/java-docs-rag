@@ -1,0 +1,10 @@
+# Proposed source boundary; no crawler runs in this scaffold.
+sources:
+  - source_id: java-se-21-api
+    title: Java SE 21 API Documentation
+    base_url: https://docs.oracle.com/en/java/javase/21/docs/api/
+    allowed_domains:
+      - docs.oracle.com
+    allowed_path_prefixes:
+      - /en/java/javase/21/docs/api/
+    language: en

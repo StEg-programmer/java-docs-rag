@@ -1,0 +1,57 @@
+# Local environments and secrets
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# IDE and Python tooling
+.idea/
+.vscode/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.egg-info/
+build/
+dist/
+
+# Local service state, model weights, downloaded datasets and generated artifacts
+qdrant_storage/
+.qdrant/
+models/
+.cache/
+*.safetensors
+*.gguf
+*.pt
+*.pth
+*.onnx
+*.bin
+*.parquet
+*.arrow
+*.h5
+*.hdf5
+*.zip
+*.tar
+*.gz
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/manifests/*
+!data/manifests/.gitkeep
+data/evaluation/*
+!data/evaluation/.gitkeep
+experiments/results/*
+!experiments/results/.gitkeep
+experiments/reports/*
+!experiments/reports/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
