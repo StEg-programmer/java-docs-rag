@@ -1,0 +1,18 @@
+# Model registry. Embeddings are owned by Developer B and mirrored in
+# src/java_docs_rag/embeddings/factory.py (KNOWN_MODELS); keep both in sync.
+embeddings:
+  - alias: bge-small
+    model_id: BAAI/bge-small-en-v1.5
+    dimension: 384
+    # BGE v1.5: optional instruction for short retrieval queries, none for passages.
+    query_prefix: "Represent this sentence for searching relevant passages: "
+    document_prefix: ""
+  - alias: e5-small
+    model_id: intfloat/multilingual-e5-small
+    dimension: 384
+    # E5 requires these prefixes for retrieval.
+    query_prefix: "query: "
+    document_prefix: "passage: "
+# Developer A fills in reranker and LLM entries.
+reranker: {}
+llm: {}

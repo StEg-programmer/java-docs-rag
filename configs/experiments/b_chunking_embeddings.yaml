@@ -1,0 +1,26 @@
+# Developer B experiment plan (Phase 6). One parameter changes per group;
+# the baseline is repeated in each group so every comparison is self-contained.
+experiment_group: b-indexing
+source_id: java-se-21-api
+evaluation_dataset: data/evaluation/questions.json
+top_k: [5, 10]
+baseline:
+  model: BAAI/bge-small-en-v1.5
+  strategy: paragraph
+  chunk_size: 512
+  overlap: 0
+groups:
+  chunking_strategy:          # fixed vs overlap vs paragraph vs section
+    vary: strategy
+    values: [fixed, overlap, paragraph, section]
+    overrides: {overlap: 51}  # 10% for the overlap strategy only
+  chunk_size:                 # 256 / 512 / 1024 characters
+    vary: chunk_size
+    values: [256, 512, 1024]
+  overlap_percent:            # overlap strategy, 0 / 10 / 20 % of chunk_size
+    vary: overlap_percent
+    values: [0, 10, 20]
+    overrides: {strategy: overlap}
+  embedding_model:            # BGE vs E5
+    vary: model
+    values: [BAAI/bge-small-en-v1.5, intfloat/multilingual-e5-small]

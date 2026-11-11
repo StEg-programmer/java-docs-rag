@@ -1,10 +1,30 @@
-# Proposed source boundary; no crawler runs in this scaffold.
+# Corpus boundary for the grabber (Developer B). Only these pages are fetched.
+# Changing this file changes the corpus: record the resulting corpus_version
+# (printed by `indexing_pipeline prepare`) in every experiment.
 sources:
   - source_id: java-se-21-api
-    title: Java SE 21 API Documentation
+    title: Java SE 21 API Documentation (java.base, selected packages)
     base_url: https://docs.oracle.com/en/java/javase/21/docs/api/
     allowed_domains:
       - docs.oracle.com
+    # Prefixes include sub-packages (java/util/ also covers java/util/stream/ etc.).
     allowed_path_prefixes:
-      - /en/java/javase/21/docs/api/
+      - /en/java/javase/21/docs/api/java.base/java/lang/
+      - /en/java/javase/21/docs/api/java.base/java/util/
+      - /en/java/javase/21/docs/api/java.base/java/io/
+      - /en/java/javase/21/docs/api/java.base/java/nio/file/
+      - /en/java/javase/21/docs/api/java.base/java/time/
+    start_urls:
+      - https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/package-summary.html
+      - https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/package-summary.html
+      - https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/io/package-summary.html
+      - https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/file/package-summary.html
+      - https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/package-summary.html
+    # Regular expressions matched against the full URL; matching pages are not fetched.
+    exclude_patterns:
+      - /class-use/
+      - /package-use\.html$
+      - /package-tree\.html$
+      - /doc-files/
+    max_pages: 1500
     language: en
