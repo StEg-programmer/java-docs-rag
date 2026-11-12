@@ -1,0 +1,26 @@
+[
+  {
+    "question_id": "list",
+    "question": "What is a List?",
+    "expected_answer": "An ordered collection.",
+    "relevant_document_ids": ["java-list"],
+    "category": "api",
+    "answerable": true
+  },
+  {
+    "question_id": "map",
+    "question": "Что такое Map.Entry<String, Integer>?",
+    "expected_answer": null,
+    "relevant_document_ids": ["java-map"],
+    "category": "api",
+    "answerable": true
+  },
+  {
+    "question_id": "weather",
+    "question": "What is tomorrow's weather?",
+    "expected_answer": null,
+    "relevant_document_ids": [],
+    "category": "out-of-scope",
+    "answerable": false
+  }
+]

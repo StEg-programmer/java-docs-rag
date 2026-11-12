@@ -13,6 +13,12 @@ embeddings:
     # E5 requires these prefixes for retrieval.
     query_prefix: "query: "
     document_prefix: "passage: "
-# Developer A fills in reranker and LLM entries.
-reranker: {}
-llm: {}
+# Reference defaults mirrored by the integrated CLI; this file is not auto-loaded.
+reranker:
+  model_id: cross-encoder/ms-marco-MiniLM-L-6-v2
+  local_files_only: true
+llm:
+  provider: ollama
+  base_url: http://localhost:11434
+  model_id: null  # Explicit --ollama-model or OLLAMA_MODEL; never pull automatically.
+  timeout: 60.0

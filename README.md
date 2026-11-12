@@ -49,10 +49,12 @@ evaluation: quality        observability: optional tracing
 При необходимости скопируйте `.env.example` в `.env`, сохранив существующий `.env`.
 В PyCharm выберите `.venv/Scripts/python.exe`. Активация окружения необязательна.
 
-Runtime-зависимостей пока нет. Extra `dev` содержит только pytest и Ruff.
-ML-библиотеки, модели и сервисы не требуются. `.env` и YAML пока являются
-образцами конфигурации: автоматическая загрузка ещё не реализована.
-`docker-compose.yml` описывает только Qdrant; контейнер не требуется для каркаса.
+Runtime-зависимости: httpx, beautifulsoup4, pyyaml; extra `dev` — pytest и Ruff.
+Unit-тесты используют fake models и HTTP, сервисы им не нужны. Для реальных
+embeddings/reranking нужен существующий optional extra `embeddings` и заранее
+подготовленные модели. Их установка/скачивание и запуск сервисов — отдельный шаг.
+`.env` и `configs/*.yaml` не загружаются автоматически: используйте аргументы CLI
+и переменные окружения. `configs/models.yaml` документирует модели.
 
 ## Проверки
 
@@ -70,13 +72,47 @@ fixtures зарезервированы для дальнейших тестов
 
 ## Текущий статус
 
-Созданы структура модулей, frozen dataclass-модели, Protocol-интерфейсы,
-конфигурационные dataclass, YAML-образцы, исключения, CLI справки, тесты и CI.
-Методы будущих компонентов поднимают `NotImplementedError`. Реальные RAG и
-indexing pipelines, парсинг, загрузка YAML/.env, метрики и интеграции отсутствуют.
-Контейнеры не запускались, модели не загружались.
+Реализованы индексация B и ответный pipeline A, объединённые через CLI.
+`java-docs-rag` (после editable install) и `python -m java_docs_rag.cli` эквивалентны.
+Общий API моделей/Protocol сохранён. Подробности запуска и результаты проверки —
+в [integration handoff](docs/reports/integration-handoff.md), индексация —
+в [docs/indexing.md](docs/indexing.md).
 
-Следующий шаг A: согласовать семантику scores/filters, реализовать retrieval
-с поддельными зависимостями, затем reranking, grounding и оценку.
-Следующий шаг B: согласовать ID/hash и метаданные, реализовать локальное
-хранение, parser и chunking на небольших HTML fixtures, затем адаптеры индексации.
+```powershell
+# Команды требуют готовых локальных моделей и запущенных Qdrant/Ollama.
+# Эти переменные запрещают Hugging Face downloads в данном сеансе.
+$env:HF_HUB_OFFLINE = "1"
+$env:TRANSFORMERS_OFFLINE = "1"
+.\.venv\Scripts\python.exe -m java_docs_rag.cli index `
+  --html tests/fixtures/javadoc/java.base/java/util/List.html `
+  --source-url https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/List.html
+.\.venv\Scripts\python.exe -m java_docs_rag.cli ask "What does List.size() return?" `
+  --ollama-model YOUR_INSTALLED_OLLAMA_MODEL
+# Старый B CLI доступен без изменения порядка его аргументов:
+.\.venv\Scripts\python.exe -m java_docs_rag.cli indexing --data-dir data prepare
+```
+
+`index` и `ask` используют одни defaults: BGE-small, 384 dimensions, paragraph
+1000 chars, коллекцию `java_docs__bge-small-en-v1-5__paragraph-s1000-o0`.
+При изменении модели/chunking повторите одинаковые параметры у обеих команд.
+`--collection` задаёт точное имя (для smoke выберите отдельную test collection).
+Новый `index` проверяет совместимость и строит изолированную коллекцию, сохраняя
+остальные документы. После проверки записанных точек атомарно переключает alias;
+старые и неудачные builds не удаляются. `collection` в JSON — стабильный alias,
+`build_collection` — опубликованная physical collection. При ошибке загрузки
+модели/размерности/записи прежняя searchable collection сохраняется.
+Для существующей physical collection используйте новый alias:
+`index ... --collection NEW_ALIAS --from-collection OLD_PHYSICAL`, затем
+`ask ... --collection NEW_ALIAS`. Одно имя не может быть physical collection и alias.
+Подробности, single-writer ограничения и неоднозначность timeout при публикации:
+[ADR безопасной публикации](docs/decisions/0002-safe-collection-publication.md).
+B `indexing ... index` сохраняет прежний incremental manifest и delete-first
+поведение; он не даёт гарантию безопасной замены нового маршрута.
+`ask` выдаёт JSON с вопросом, ответом, флагом отказа, raw retrieval и sources.
+Источники — переданные модели доказательства, а не автоматическая проверка её цитат.
+
+У `index` и `ask` есть `--trace` для count-only Langfuse telemetry. По умолчанию
+tracing выключен; настройте endpoint/project keys локально через `LANGFUSE_HOST`,
+`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` (не помещайте ключи в репозиторий).
+Передаются durations, counts и outcomes без текста вопросов, документов, prompts
+и ответов. Подробные команды и фактическая проверка получения — в integration handoff.

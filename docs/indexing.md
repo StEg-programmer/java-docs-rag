@@ -1,5 +1,23 @@
 # Индексация (Developer B): запуск, Qdrant, Langfuse
 
+Объединённая точка входа A/B: `python -m java_docs_rag.cli index/ask`.
+Старые команды ниже доступны также как `python -m java_docs_rag.cli indexing ...`.
+`index --html PATH --source-url URL` индексирует локальный sample,
+`index --input PATH.jsonl` использует результат prepare. Эта команда строит новую
+physical collection: сохраняет остальные документы, добавляет замены, проверяет
+записанные точки и только затем атомарно переключает стабильный alias.
+Старые/failed builds не удаляются. Для прежней physical collection требуется
+новый alias: `index ... --collection NEW_ALIAS --from-collection OLD_PHYSICAL`.
+У нового маршрута нет incremental manifest: это безопасная subset replacement.
+Прежний `indexing ... index` сохраняет incremental manifest и delete-first
+поведение, поэтому не имеет этих гарантий сохранности при ошибке замены.
+См. [ADR 0002](decisions/0002-safe-collection-publication.md).
+Обе версии используют те же factories и collection naming; параметры модели,
+chunking и `--collection` у `ask` должны совпадать с индексацией.
+Перед выполнением подготовьте зависимости/модели и сервисы с разрешения пользователя.
+Точные команды, offline проверка и live blockers:
+[integration-handoff.md](reports/integration-handoff.md).
+
 Поток: официальные Java docs → `data/raw` → parse/clean/normalize →
 `data/processed/*.jsonl` → chunks → embeddings → Qdrant.
 Решения по ID, хешам и схеме — в `docs/decisions/0001-indexing-identity-and-chunking.md`.
@@ -97,13 +115,22 @@ results = store.search(embedder.embed_query("How do I get the size of a List?"),
 
 ```python
 from java_docs_rag.observability.langfuse_client import create_tracer
+from java_docs_rag.observability.safe_tracing import SafeTelemetry
 
-tracer = create_tracer(config.observability)
-with tracer.span("rag.retrieve", metadata={"top_k": 10}, input=question) as span:
+tracer = SafeTelemetry(create_tracer(config.observability))
+with tracer.span("rag.retrieve", metadata={"top_k": 10}) as span:
     results = retriever.retrieve(question, 10)
-    span.update(output={"chunk_ids": [r.chunk.chunk_id for r in results]})
+    span.update(output={"raw_count": len(results)})
 tracer.flush()
 ```
 
 Ошибки Langfuse только логируются и не прерывают pipeline; адаптер поддерживает SDK v2
 и v3.
+
+У integrated `index` и `ask` есть opt-in `--trace`. Без флага не используются SDK,
+ключи или сеть Langfuse, даже если окружение уже настроено. Перед запуском с флагом
+задайте локально `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`.
+В telemetry передаются только allowlisted числовые counts/durations и фиксированные
+outcomes; question/document text, prompts, answers и exception payloads исключены.
+CLI JSON содержит correlation trace IDs, но `receipt_verified=false`: только
+независимое чтение observations API подтверждает получение сервером. См. handoff.

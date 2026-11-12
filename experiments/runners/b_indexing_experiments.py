@@ -96,9 +96,11 @@ def evaluate_retrieval_quality(
         from java_docs_rag.evaluation.dataset import load_dataset
         from java_docs_rag.evaluation.retrieval_metrics import evaluate_retrieval
 
-        questions = [q for q in load_dataset(dataset_path) if q.answerable]
+        questions = [
+            q for q in load_dataset(dataset_path) if q.answerable and q.relevant_document_ids
+        ]
         if not questions:
-            return None, "evaluation dataset has no answerable questions"
+            return None, "evaluation dataset has no answerable questions with relevant documents"
         per_k: dict[str, Any] = {}
         searches: dict[str, list[SearchResult]] = {}
         latency: list[float] = []
@@ -110,7 +112,8 @@ def evaluate_retrieval_quality(
             latency.append(time.perf_counter() - started)
         for k in top_ks:
             rows = [
-                evaluate_retrieval(searches[q.question_id][:k], q.relevant_document_ids, k)
+                # A's document-level metric applies k after deduplicating document IDs.
+                evaluate_retrieval(searches[q.question_id], q.relevant_document_ids, k)
                 for q in questions
             ]
             per_k[str(k)] = {name: statistics.fmean(row[name] for row in rows) for name in rows[0]}
