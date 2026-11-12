@@ -72,7 +72,9 @@ def test_run_records_conditions_and_never_invents_retrieval_metrics(tmp_path: Pa
     assert conditions["evaluation_dataset_sha"] and len(conditions["corpus_version"]) == 16
     assert result["indexing"]["chunks"] > 2
     assert result["retrieval"] is None
-    assert "Developer A" in result["retrieval_unavailable_reason"]
+    assert result["retrieval_unavailable_reason"] == (
+        "evaluation dataset has no answerable questions with relevant documents"
+    )
 
     missing = runner.run_one(
         run,
@@ -94,3 +96,58 @@ def test_run_records_conditions_and_never_invents_retrieval_metrics(tmp_path: Pa
 def test_dry_run(capsys) -> None:
     assert runner.main(["--dry-run", "--group", "embedding_model"]) == 0
     assert capsys.readouterr().out.count("RunConfig") == 2
+
+
+def test_real_a_metrics_apply_k_to_unique_documents(tmp_path: Path) -> None:
+    from java_docs_rag.common.models import SearchResult
+    from java_docs_rag.preprocessing.chunking.factory import create_chunker
+
+    documents = [
+        make_document("list", "Ordered collection. " * 30),
+        make_document("map", "Maps keys to values."),
+    ]
+    chunker = create_chunker(runner.ChunkingConfig("paragraph", 100, 0))
+    list_chunks = chunker.split(documents[0])
+    map_chunk = chunker.split(documents[1])[0]
+    hits = [
+        SearchResult(list_chunks[0], 0.9),
+        SearchResult(list_chunks[1], 0.8),
+        SearchResult(map_chunk, 0.7),
+    ]
+
+    class Store:
+        def search(self, vector, top_k):
+            assert top_k == 3
+            return hits
+
+    dataset = tmp_path / "questions.json"
+    dataset.write_text(
+        json.dumps(
+            [
+                {
+                    "question_id": "map",
+                    "question": "What is a Map?",
+                    "expected_answer": None,
+                    "relevant_document_ids": [documents[1].document_id],
+                    "category": "api",
+                    "answerable": True,
+                },
+                {
+                    "question_id": "missing-labels",
+                    "question": "No relevance labels",
+                    "expected_answer": None,
+                    "relevant_document_ids": [],
+                    "category": "api",
+                    "answerable": True,
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    metrics, reason = runner.evaluate_retrieval_quality(FakeEmbedder(), Store(), dataset, [2, 3])
+    assert reason is None and metrics["questions"] == 1
+    assert metrics["metrics_at_k"]["2"] == {
+        "precision_at_k": 0.5,
+        "recall_at_k": 1.0,
+        "mrr_at_k": 0.5,
+    }

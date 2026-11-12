@@ -86,7 +86,7 @@ class _SdkSpan:
         try:
             self.native.update(**fields)
         except Exception as exc:  # tracing must not break the pipeline
-            logger.warning("Langfuse span update failed: %s", exc)
+            logger.warning("Langfuse span update failed (%s)", type(exc).__name__)
 
 
 @dataclass
@@ -163,7 +163,7 @@ class LangfuseClient:
         except ConfigurationError:
             raise
         except Exception as exc:
-            logger.warning("Langfuse span '%s' could not be started: %s", name, exc)
+            logger.warning("Langfuse span '%s' could not be started (%s)", name, type(exc).__name__)
             yield _NoOpSpan()
             return
         self._stack.append(native)
@@ -181,7 +181,9 @@ class LangfuseClient:
                 else:
                     context.__exit__(None, None, None)
             except Exception as exc:
-                logger.warning("Langfuse span '%s' could not be closed: %s", name, exc)
+                logger.warning(
+                    "Langfuse span '%s' could not be closed (%s)", name, type(exc).__name__
+                )
 
     def record(self, name: str, metadata: dict[str, str]) -> None:
         """A point-in-time event (e.g. 'document skipped: unchanged')."""
@@ -196,14 +198,14 @@ class LangfuseClient:
         except ConfigurationError:
             raise
         except Exception as exc:
-            logger.warning("Langfuse event '%s' failed: %s", name, exc)
+            logger.warning("Langfuse event '%s' failed (%s)", name, type(exc).__name__)
 
     def flush(self) -> None:
         if self.client is not None:
             try:
                 self.client.flush()
             except Exception as exc:
-                logger.warning("Langfuse flush failed: %s", exc)
+                logger.warning("Langfuse flush failed (%s)", type(exc).__name__)
 
 
 def create_tracer(config: ObservabilityConfig) -> NoOpTracer | LangfuseClient:
